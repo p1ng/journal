@@ -1,3 +1,42 @@
+name: Desktop builds
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libwayland-dev libgl1-mesa-dev libx11-dev pkg-config
+      - if: runner.os == 'Windows'
+        uses: ilammy/setup-nasm@v1
+      - run: cargo test
+      - run: cargo build --release --locked
+
+      - name: Package executable
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          mkdir -p dist
+          case "$RUNNER_OS" in
+            Windows) cp target/release/journal.exe "dist/journal-Windows-$RUNNER_ARCH.exe" ;;
+            *) tar -czf "dist/journal-$RUNNER_OS-$RUNNER_ARCH.tar.gz" -C target/release journal ;;
+          esac
+      - uses: actions/upload-artifact@v7
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: journal-${{ runner.os }}-${{ runner.arch }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 3
+
   release:
     needs: desktop
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
@@ -10,7 +49,6 @@
           pattern: journal-*
           path: dist
           merge-multiple: true
-
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}

@@ -19,7 +19,3 @@ Click **New entry** to write. Changes save after 750 ms of inactivity, when swit
 The app opens journal.db in the per-user local application data directory selected by the directories crate. On a typical Linux installation this is ~/.local/share/journal/journal.db. Journal content and timestamps share the same database. The app uses SQLCipher's default encrypted format and key derivation for password-protected databases. It does not store the passphrase. The plain storage option writes an ordinary SQLite database.
 
 The version-one schema lives in src/schema.sql. Database initialization occurs in a temporary file in the destination directory. The completed file is published only if the destination is still available. An existing file with an unknown header is treated as potentially encrypted. Failed reads never trigger automatic recreation.
-
-## Verify
-
-Run `cargo test` for encrypted reopen, incorrect and absent passwords, plain SQLite reopen, write conflicts, and create-without-overwrite checks. The included GitHub Actions workflow runs these tests and a release build on three desktop operating systems. Cargo generates Cargo.lock during the first build. Commit it before publishing a release.
